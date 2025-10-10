@@ -41,7 +41,7 @@ venv.bak/
 *.db
 *.sqlite
 *.sqlite3
-data/agri.db
+data/agrisage.db
 
 # Vector database
 services/rag/chroma_db/
