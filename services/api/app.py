@@ -122,11 +122,10 @@ def get_context_from_db(location: str = None) -> Dict:
         if location:
             # Get recent weather for location
             cursor.execute("""
-                SELECT precip_prob, max_temp, min_temp, soil_moisture 
-                FROM weather_forecast w
-                LEFT JOIN soil_card s ON w.district = s.district
+                SELECT precip_prob, max_temp, min_temp, NULL as soil_moisture 
+                FROM reliable_weather w
                 WHERE w.district LIKE ? 
-                ORDER BY w.forecast_date DESC LIMIT 1
+                ORDER BY w.date DESC LIMIT 1
             """, (f"%{location}%",))
             
             result = cursor.fetchone()
@@ -236,13 +235,9 @@ def retrieve_documents(query: str, k: int = 5, location: str = None) -> tuple:
         )
         
         if not filtered_docs:
-            # If no filtered results, use top vector results but with lower confidence
-            logger.warning(f"No metadata-filtered results for query: {query}")
-            top_docs = documents[:k]
-            top_metas = metadatas[:k]
-            # Lower confidence for non-filtered results
-            avg_score = 0.3
-            return top_docs, top_metas, avg_score
+            # If no filtered results, return empty instead of irrelevant data
+            logger.warning(f"No relevant data found for query: {query} (intent: {primary_intent})")
+            return [], [], 0.0
         
         # Take top k filtered results
         final_docs = filtered_docs[:k]
@@ -337,7 +332,7 @@ def log_llm_request(request_id: str, prompt: str, response: dict, status_code: i
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "request_id": request_id,
-            "model": "gemini-1.5-flash",
+            "model": "gemini-2.0-flash",
             "prompt_length": len(prompt),
             "status_code": status_code,
             "latency_ms": round(latency * 1000, 2),
@@ -362,8 +357,8 @@ def call_gemini_llm(prompt: str) -> tuple:
             logger.warning("Gemini API key not available")
             return None, 0.0
         
-        # Gemini API endpoint - using gemini-1.5-flash (current available model)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
+        # Gemini API endpoint - using gemini-2.0-flash (current available model)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
         
         headers = {
             "Content-Type": "application/json"
@@ -545,8 +540,9 @@ async def ask_question(request: QueryRequest):
             
             provenance.append(prov_entry)
         
-        # Enhanced response with safety metadata
-        enhanced_answer = f"{llm_response}\n\n**Sources:** {', '.join([p['source'] for p in provenance])}\n**Confidence:** {format_confidence_level(combined_confidence)}\n**Actionability:** {'Yes' if safety_check['actionable'] else 'No'}"
+        # Enhanced response with safety metadata - deduplicate sources
+        unique_sources = list(set([p['source'] for p in provenance]))
+        enhanced_answer = f"{llm_response}\n\n**Sources:** {', '.join(unique_sources)}\n**Confidence:** {format_confidence_level(combined_confidence)}\n**Actionability:** {'Yes' if safety_check['actionable'] else 'No'}"
         
         return QueryResponse(
             answer=enhanced_answer,

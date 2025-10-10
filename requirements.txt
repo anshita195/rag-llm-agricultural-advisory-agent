@@ -5,7 +5,6 @@ pydantic==2.5.0
 python-dotenv==1.0.0
 
 # Database
-sqlite3  # Built-in with Python
 sqlalchemy==2.0.23
 
 # AI/ML
@@ -17,27 +16,9 @@ pandas==2.1.4
 
 # API clients
 requests==2.31.0
-httpx==0.25.2
 
-# Weather APIs
-pyowm==3.3.0
-
-# Logging and monitoring
-structlog==23.2.0
-
-# Web UI (Streamlit)
+# Web UI
 streamlit==1.28.1
-plotly==5.17.0
-
-# SMS Gateway
-twilio==8.10.0
-flask==3.0.0
-
-# Multilingual Support
-transformers==4.35.2
-torch==2.1.1
-langdetect==1.0.9
 
 # Additional utilities
-pathlib2==2.3.7
 python-multipart==0.0.6

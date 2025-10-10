@@ -184,11 +184,10 @@ def main():
         
         quick_queries = [
             "Weather forecast for next 3 days",
-            "Rice price today",
-            "Wheat market rates",
-            "Best time to plant mustard",
+            "Will it rain tomorrow in Roorkee?",
+            "What is the soil pH in my area?",
             "Soil preparation for maize",
-            "Fertilizer recommendations"
+            "Best time to plant mustard"
         ]
         
         for query in quick_queries:
@@ -291,10 +290,10 @@ def main():
         st.info("""
         **Try asking:**
         - "Weather in Roorkee tomorrow"
-        - "Wheat price today"
-        - "Best time to plant rice"
-        - "Fertilizer for mustard crop"
-        - "Soil pH for maize"
+        - "Is it good weather for harvesting?"
+        - "What is the soil pH in my area?"
+        - "Soil preparation for maize"
+        - "Best time to plant mustard"
         """)
         
         # Language support

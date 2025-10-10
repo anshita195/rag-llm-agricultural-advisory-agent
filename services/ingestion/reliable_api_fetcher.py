@@ -221,20 +221,9 @@ class ReliableAPIFetcher:
         return [] # Return empty list if nothing is fetched
 
     def fallback_market_data(self):
-        """Fallback to sample market data CSV if API fails."""
-        print("⚠️ API failed. Falling back to sample market data...")
-        try:
-            sample_path = Path("data/sample/market_sample.csv")
-            if not sample_path.exists():
-                print(f"❌ Fallback file not found at {sample_path}")
-                return []
-
-            df = pd.read_csv(sample_path)
-            market_data = df.to_dict('records')
-            print(f"✅ Loaded {len(market_data)} fallback market records.")
-            return market_data
-        except Exception as e:
-            print(f"❌ Error during fallback data processing: {e}")
+        """No fallback - return empty if API fails."""
+        logger.warning("Market API failed - no sample data fallback available")
+        return []
         
         # Fallback to CSV URLs
         csv_urls = [
@@ -404,57 +393,21 @@ class ReliableAPIFetcher:
                     'url': latest['url']
                 })
             else:
-                # Ultimate fallback
-                weather_data.append({
-                    'district': district,
-                    'date': datetime.now().strftime('%Y-%m-%d'),
-                    'max_temp': 28.0,
-                    'min_temp': 18.0,
-                    'rainfall': 2.0,
-                    'humidity': 65,
-                    'wind_speed': 8.0,
-                    'precip_prob': 30.0,
-                    'description': 'partly cloudy',
-                    'source': 'OpenWeatherMap',
-                    'url': 'https://power.larc.nasa.gov'
-                })
+                # No fallback - skip if no data available
+                logger.warning(f"No weather data available for {district}")
+                continue
         
         return weather_data
     
     def _soil_fallback(self, locations: List[Dict]) -> List[Dict]:
-        """Fallback soil data"""
-        return [{
-            'district': loc['district'],
-            'lat': loc['lat'],
-            'lon': loc['lon'],
-            'pH': 6.8,
-            'nitrogen': 1.2,
-            'organic_carbon': 1.5,
-            'sand_percent': 35,
-            'clay_percent': 28,
-            'date': datetime.now().strftime('%Y-%m-%d'),
-            'source': 'FALLBACK_SOIL_API_FAILED',
-            'url': 'https://soilgrids.org'
-        } for loc in locations]
+        """No fallback - return empty if API fails"""
+        logger.warning("SoilGrids API failed - no fallback data available")
+        return []
     
     def _market_fallback(self) -> List[Dict]:
-        """Fallback market data"""
-        commodities = [
-            ('Wheat', 'Dehradun', 2200.0),
-            ('Rice', 'Dehradun', 3500.0),
-            ('Wheat', 'Roorkee', 2180.0),
-            ('Rice', 'Roorkee', 3450.0)
-        ]
-        
-        return [{
-            'date': datetime.now().strftime('%Y-%m-%d'),
-            'commodity': commodity,
-            'mandi': f'{district} Mandi',
-            'district': district,
-            'price': price,
-            'source': 'FALLBACK_MARKET_API_FAILED',
-            'url': 'https://agmarknet.gov.in'
-        } for commodity, district, price in commodities]
+        """No fallback - return empty if API fails"""
+        logger.warning("Market API failed - no fallback data available")
+        return []
 
 def main():
     """Test the reliable API fetcher"""
@@ -478,12 +431,12 @@ def main():
     # Update database
     success = fetcher.update_database(weather_data, soil_data, agro_data, market_data)
     
-    print(f"\n📊 Results:")
+    print(f"\nResults:")
     print(f"Weather records: {len(weather_data)}")
     print(f"Soil records: {len(soil_data)}")
     print(f"Agro records: {len(agro_data)}")
     print(f"Market records: {len(market_data)}")
-    print(f"Database update: {'✅ Success' if success else '❌ Failed'}")
+    print(f"Database update: {'Success' if success else 'Failed'}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

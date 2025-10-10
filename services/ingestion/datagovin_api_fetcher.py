@@ -464,28 +464,28 @@ class DataGovInAPIFetcher:
 
 def main():
     """Test the data.gov.in API fetcher with farmer-friendly responses"""
-    print("🌐 Testing Data.gov.in API Fetcher with Farmer-Friendly Responses...")
+    print("Testing Data.gov.in API Fetcher with Farmer-Friendly Responses...")
     
     fetcher = DataGovInAPIFetcher()
     
     if not fetcher.api_key:
-        print("❌ DATA_GOV_IN_API_KEY not found in .env file")
-        print("📝 Please register at https://data.gov.in and add your API key to .env")
+        print("DATA_GOV_IN_API_KEY not found in .env file")
+        print("Please register at https://data.gov.in and add your API key to .env")
         return
     
     # Fetch mandi prices
-    market_data = fetcher.fetch_mandi_prices(limit=500)
+    market_data = fetcher.fetch_market_prices_for_state('Uttarakhand', limit=500)
     
     if market_data:
-        print(f"\n📊 Fetched {len(market_data)} relevant mandi records:")
+        print(f"\nFetched {len(market_data)} relevant mandi records:")
         for record in market_data[:5]:
             print(f"  {record['commodity']} at {record['mandi']}, {record['district']} ({record['state']}): ₹{record['price']}")
         
         success = fetcher.update_database(market_data)
-        print(f"Database update: {'✅ Success' if success else '❌ Failed'}")
+        print(f"Database update: {'Success' if success else 'Failed'}")
         
         # Show data coverage summary
-        print(f"\n📊 Data Coverage Summary:")
+        print(f"\nData Coverage Summary:")
         conn = sqlite3.connect(fetcher.db_path)
         cursor = conn.cursor()
         cursor.execute("""
@@ -502,7 +502,7 @@ def main():
         conn.close()
         
         # Test enhanced query functionality with region-aware fallback
-        print(f"\n🔍 Testing region-aware price queries:")
+        print(f"\nTesting region-aware price queries:")
         test_queries = [
             ('rice', 'roorkee'),
             ('wheat', 'dehradun'), 
@@ -516,11 +516,11 @@ def main():
         for commodity, location in test_queries:
             result = fetcher.get_price_for_query(commodity, location)
             farmer_response = fetcher.format_farmer_response(commodity, location, result)
-            print(f"\n👨‍🌾 Query: {commodity}{f' in {location}' if location else ''}")
+            print(f"\nQuery: {commodity}{f' in {location}' if location else ''}")
             print(f"Response: {farmer_response}")
     else:
-        print("❌ No market data fetched from API")
-        print("📝 Troubleshooting:")
+        print("No market data fetched from API")
+        print("Troubleshooting:")
         print("  1. Check DATA_GOV_IN_API_KEY in .env")
         print("  2. Verify internet connection")
         print("  3. Try again later (API may be temporarily down)")

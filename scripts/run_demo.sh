@@ -34,18 +34,18 @@ if [ ! -f .env ]; then
     read -p "Press Enter after you've added your API keys to .env file..."
 fi
 
-# Run ETL
-echo "🔄 Running ETL pipeline..."
-python services/ingestion/etl_imd.py
+# Run data ingestion
+echo "🔄 Running data ingestion pipeline..."
+python -m services.ingestion.reliable_api_fetcher
 
 if [ $? -ne 0 ]; then
-    echo "❌ ETL failed. Check your data files in data/sample/"
+    echo "❌ Data ingestion failed. Check your API keys in .env file"
     exit 1
 fi
 
 # Build vector index
 echo "🧠 Building vector index..."
-python services/rag/build_index.py
+python -m services.rag.build_index
 
 if [ $? -ne 0 ]; then
     echo "❌ Vector index build failed"

@@ -11,33 +11,33 @@ import pandas as pd
 
 def load_data_from_db():
     """Load data from SQLite database for indexing"""
-    db_path = Path("data/agri.db")
+    db_path = Path("data/agrisage.db")
     if not db_path.exists():
-        raise FileNotFoundError("Database not found. Run ETL first: python services/ingestion/etl_imd.py")
+        raise FileNotFoundError("Database not found. Run data ingestion first: python -m services.ingestion.reliable_api_fetcher")
     # Load data from database (prioritize reliable sources)
     conn = sqlite3.connect('data/agrisage.db')
     
-    # Try reliable data first, fallback to original tables
+    # Load data from reliable tables only
     try:
         weather_df = pd.read_sql_query("SELECT * FROM reliable_weather", conn)
-        print(f"✅ Using reliable weather data: {len(weather_df)} records")
-    except:
-        weather_df = pd.read_sql_query("SELECT * FROM weather_forecast", conn)
-        print(f"⚠️ Using fallback weather data: {len(weather_df)} records")
+        print(f"Using reliable weather data: {len(weather_df)} records")
+    except Exception as e:
+        print(f"Error loading weather data: {e}")
+        weather_df = pd.DataFrame()
     
     try:
         soil_df = pd.read_sql_query("SELECT * FROM reliable_soil", conn)
-        print(f"✅ Using reliable soil data: {len(soil_df)} records")
-    except:
-        soil_df = pd.read_sql_query("SELECT * FROM soil_card", conn)
-        print(f"⚠️ Using fallback soil data: {len(soil_df)} records")
+        print(f"Using reliable soil data: {len(soil_df)} records")
+    except Exception as e:
+        print(f"Error loading soil data: {e}")
+        soil_df = pd.DataFrame()
     
     try:
-        market_df = pd.read_sql_query("SELECT * FROM real_mandi_prices WHERE source = 'DataGovIn_API'", conn)
-        print(f"✅ Using reliable market data: {len(market_df)} records")
-    except:
-        market_df = pd.read_sql_query("SELECT * FROM market_prices", conn)
-        print(f"⚠️ Using fallback market data: {len(market_df)} records")
+        market_df = pd.read_sql_query("SELECT * FROM reliable_markets", conn)
+        print(f"Using reliable market data: {len(market_df)} records")
+    except Exception as e:
+        print(f"Error loading market data: {e}")
+        market_df = pd.DataFrame()
     
     documents = []
     metadatas = []
@@ -239,12 +239,12 @@ def main():
     try:
         collection = build_chroma_index()
         test_index()
-        print("\n✅ Vector index built successfully!")
+        print("\nVector index built successfully!")
         print("Next step: Start the API server with 'uvicorn services.api.app:app --reload'")
         
     except Exception as e:
-        print(f"❌ Error building index: {e}")
-        print("Make sure to run ETL first: python services/ingestion/etl_imd.py")
+        print(f"Error building index: {e}")
+        print("Make sure to run data ingestion first: python -m services.ingestion.reliable_api_fetcher")
 
 if __name__ == "__main__":
     main()

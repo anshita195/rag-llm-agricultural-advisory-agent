@@ -14,10 +14,12 @@ def irrigation_rule(soil_moisture, precip_prob):
     Returns:
         dict: {"action": str, "advice": str, "confidence": float}
     """
-    if soil_moisture is None: 
-        soil_moisture = 30
-    if precip_prob is None: 
-        precip_prob = 30
+    if soil_moisture is None or precip_prob is None:
+        return {
+            "action": "insufficient_data",
+            "advice": "Insufficient soil moisture or weather data. Please check your local weather station or agricultural extension officer for current conditions.",
+            "confidence": 0.3
+        }
     
     if soil_moisture < 30 and precip_prob < 30:
         return {
@@ -54,7 +56,7 @@ def fertilizer_rule(crop, growth_stage, soil_n, soil_p, soil_k):
     if any(x is None for x in [soil_n, soil_p, soil_k]):
         return {
             "action": "soil_test",
-            "advice": "Get soil tested for accurate fertilizer recommendations.",
+            "advice": "Soil nutrient data not available. Please get your soil tested at a local agricultural laboratory for accurate fertilizer recommendations.",
             "confidence": 0.85
         }
     
