@@ -1,8 +1,8 @@
-# AgriSage - AI Agricultural Assistant
+AI Agricultural Assistant
 
 A production-ready RAG (Retrieval-Augmented Generation) system that provides agricultural advice to Indian farmers using real-time data from authoritative sources.
 
-## 🎯 What It Does
+## What It Does
 
 AgriSage answers agricultural questions using:
 - **Real weather data** from OpenWeatherMap API
@@ -10,7 +10,7 @@ AgriSage answers agricultural questions using:
 - **AI-powered responses** via Google Gemini 2.0 Flash
 - **Safety mechanisms** that escalate complex queries to human experts
 
-## 🏗️ Architecture
+## Architecture
 
 - **Backend**: FastAPI with SQLite database
 - **Vector Search**: ChromaDB with sentence-transformer embeddings
@@ -18,13 +18,13 @@ AgriSage answers agricultural questions using:
 - **LLM**: Google Gemini 2.0 Flash
 - **Data Sources**: OpenWeatherMap, SoilGrids ISRIC, NASA POWER
 
-## 📊 Current Data Coverage
+## Current Data Coverage
 
 - **Weather**: 60+ records (real-time forecasts)
 - **Soil**: 12+ records (pH, nutrients, composition)
 - **Market**: 0 records (DataGovIn API currently not returning data)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Setup Environment
 ```bash
@@ -64,26 +64,26 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 - **Frontend**: http://localhost:8501
 - **API Docs**: http://localhost:8000/docs
 
-## 🔍 What Works Well
+## What Works Well
 
-### ✅ Weather Queries
+### Weather Queries
 - "Weather forecast for next 3 days"
 - "Will it rain tomorrow in Roorkee?"
 - **Source**: OpenWeatherMap API
 - **Confidence**: High (90%+)
 
-### ✅ Soil Queries  
+### Soil Queries  
 - "What is the soil pH in my area?"
 - "Soil preparation for maize"
 - **Source**: SoilGrids ISRIC API
 - **Confidence**: High (90%+)
 
-### ✅ Safety Mechanisms
+### Safety Mechanisms
 - "Best time to plant mustard" → Escalates to human expert
 - **Reason**: Conservative approach for complex agricultural advice
 - **Shows**: Robust safety systems
 
-## ⚠️ Current Limitations
+## Current Limitations
 
 ### Market Data
 - **Issue**: DataGovIn API returning 0 records
@@ -94,7 +94,7 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 - **Current**: Roorkee, Haridwar region
 - **Expansion**: Add more districts to `reliable_api_fetcher.py`
 
-## 🛠️ Technical Details
+## Technical Details
 
 ### Data Pipeline
 1. **Ingestion**: `services/ingestion/reliable_api_fetcher.py`
@@ -108,7 +108,7 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 - **Provenance Tracking**: Links responses to specific data records
 - **Safety Escalation**: Complex queries routed to human experts
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 AgriSage2/
@@ -123,7 +123,7 @@ AgriSage2/
 └── scripts/         # Utility scripts
 ```
 
-## 🔧 Development
+## Development
 
 ### Adding New Data Sources
 1. Add fetcher in `services/ingestion/reliable_api_fetcher.py`
@@ -138,7 +138,7 @@ curl -X POST http://localhost:8000/ask \
   -d '{"user_id":"test","question":"weather forecast","location":"Roorkee"}'
 ```
 
-## 📈 Future Enhancements
+## Future Enhancements
 
 - **Market Data**: Fix DataGovIn API or integrate alternative source
 - **Geographic Expansion**: Add more Indian districts
@@ -146,18 +146,8 @@ curl -X POST http://localhost:8000/ask \
 - **SMS Integration**: Twilio-based SMS queries
 - **Mobile App**: React Native frontend
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch
-3. Add tests for new functionality
-4. Submit pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## ⚡ Performance
+## Performance
 
 - **Response Time**: < 3 seconds for most queries
 - **Data Freshness**: Weather updated every 3 hours
@@ -165,5 +155,3 @@ MIT License - see LICENSE file for details
 - **Concurrent Users**: Tested up to 50 simultaneous requests
 
 ---
-
-**Built with ❤️ for Indian farmers**
