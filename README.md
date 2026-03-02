@@ -20,9 +20,8 @@ AgriSage answers agricultural questions using:
 
 ## Current Data Coverage
 
-- **Weather**: 60+ records (real-time forecasts)
-- **Soil**: 12+ records (pH, nutrients, composition)
-- **Market**: 0 records (DataGovIn API currently not returning data)
+- **Weather**: real-time forecasts
+- **Soil**: pH, nutrients, composition
 
 ## Quick Start
 
@@ -85,11 +84,6 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 
 ## Current Limitations
 
-### Market Data
-- **Issue**: DataGovIn API returning 0 records
-- **Impact**: Market price queries use fallback responses
-- **Status**: External API issue, not code problem
-
 ### Geographic Coverage
 - **Current**: Roorkee, Haridwar region
 - **Expansion**: Add more districts to `reliable_api_fetcher.py`
@@ -140,11 +134,9 @@ curl -X POST http://localhost:8000/ask \
 
 ## Future Enhancements
 
-- **Market Data**: Fix DataGovIn API or integrate alternative source
 - **Geographic Expansion**: Add more Indian districts
 - **Multilingual**: Hindi language support
 - **SMS Integration**: Twilio-based SMS queries
-- **Mobile App**: React Native frontend
 
 
 ## Performance
