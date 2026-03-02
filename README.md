@@ -7,7 +7,7 @@ A production-ready RAG (Retrieval-Augmented Generation) system that provides agr
 AgriSage answers agricultural questions using:
 - **Real weather data** from OpenWeatherMap API
 - **Real soil data** from SoilGrids ISRIC API  
-- **AI-powered responses** via Google Gemini 2.0 Flash
+- **AI-powered responses** via Google Gemini 2.0
 - **Safety mechanisms** that escalate complex queries to human experts
 
 ## Architecture
@@ -15,7 +15,7 @@ AgriSage answers agricultural questions using:
 - **Backend**: FastAPI with SQLite database
 - **Vector Search**: ChromaDB with sentence-transformer embeddings
 - **Frontend**: Streamlit chat interface
-- **LLM**: Google Gemini 2.0 Flash
+- **LLM**: Google Gemini 2.0
 - **Data Sources**: OpenWeatherMap, SoilGrids ISRIC, NASA POWER
 
 ## Current Data Coverage
@@ -29,7 +29,7 @@ AgriSage answers agricultural questions using:
 ### 1. Setup Environment
 ```bash
 git clone <your-repo-url>
-cd AgriSage2
+cd rag-llm-agricultural-advisory-agent
 pip install -r requirements.txt
 ```
 
@@ -111,7 +111,7 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 ## Project Structure
 
 ```
-AgriSage2/
+rag-llm-agricultural-advisory-agent/
 ├── services/
 │   ├── api/           # FastAPI backend
 │   ├── ingestion/     # Data fetching
