@@ -1,4 +1,4 @@
-AI Agricultural Assistant
+# AI Agricultural Assistant
 
 A production-ready RAG (Retrieval-Augmented Generation) system that provides agricultural advice to Indian farmers using real-time data from authoritative sources.
 
