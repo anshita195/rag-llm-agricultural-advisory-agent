@@ -118,6 +118,7 @@ class ReliableAPIFetcher:
                     if mean is None:
                         return None
                     d_factor = layer.get('unit_measure', {}).get('d_factor', 1) or 1
+                    # Returns SoilGrids conventional units: g/kg for nitrogen/soc; % for sand/clay/silt
                     return mean / d_factor
                 if response.status_code == 503:
                     continue

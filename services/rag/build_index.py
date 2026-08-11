@@ -90,7 +90,12 @@ def load_data_from_db():
             organic_carbon = row.get('organic_carbon', 0)
             sand_percent = row.get('sand_percent', 0)
             clay_percent = row.get('clay_percent', 0)
-            text = f"Soil analysis for {district}: pH {pH:.1f}, Nitrogen {nitrogen:.1f}%, Organic Carbon {organic_carbon:.1f}%, Sand {sand_percent}%, Clay {clay_percent}%"
+            # SoilGrids units: nitrogen and organic_carbon are g/kg; sand/clay are % (g/100g)
+            text = (
+                f"Soil analysis for {district}: pH {pH:.1f}, "
+                f"Nitrogen {nitrogen:.2f} g/kg, Organic Carbon {organic_carbon:.1f} g/kg, "
+                f"Sand {sand_percent:.1f}%, Clay {clay_percent:.1f}%"
+            )
         
         documents.append(text)
         metadatas.append({
