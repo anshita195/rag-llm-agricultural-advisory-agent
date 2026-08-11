@@ -140,20 +140,34 @@ class ReliableAPIFetcher:
                 logger.error(f"SoilGrids pH fetch failed for {district}")
                 continue
 
-            nitrogen = self._fetch_soilgrids_property(lat, lon, 'nitrogen')
-            organic_carbon = self._fetch_soilgrids_property(lat, lon, 'soc')
-            sand = self._fetch_soilgrids_property(lat, lon, 'sand')
-            clay = self._fetch_soilgrids_property(lat, lon, 'clay')
+            property_map = {
+                'nitrogen': 'nitrogen',
+                'soc': 'organic_carbon',
+                'sand': 'sand_percent',
+                'clay': 'clay_percent',
+            }
+            fetched = {}
+            for api_prop, field_name in property_map.items():
+                value = self._fetch_soilgrids_property(lat, lon, api_prop)
+                if value is None:
+                    value = self._fetch_soilgrids_property(lat, lon, api_prop)
+                fetched[field_name] = value
+
+            missing = [field for field, value in fetched.items() if value is None]
+            if missing:
+                logger.warning(
+                    f"Incomplete SoilGrids profile for {district}: missing {', '.join(missing)}"
+                )
 
             soil_record = {
                 'district': district,
                 'lat': lat,
                 'lon': lon,
                 'pH': ph,
-                'nitrogen': nitrogen if nitrogen is not None else 0.0,
-                'organic_carbon': organic_carbon if organic_carbon is not None else 0.0,
-                'sand_percent': sand if sand is not None else 0.0,
-                'clay_percent': clay if clay is not None else 0.0,
+                'nitrogen': fetched['nitrogen'],
+                'organic_carbon': fetched['organic_carbon'],
+                'sand_percent': fetched['sand_percent'],
+                'clay_percent': fetched['clay_percent'],
                 'date': datetime.now().strftime('%Y-%m-%d'),
                 'source': 'SoilGrids_ISRIC',
                 'url': f"https://soilgrids.org/#!/?lat={lat}&lng={lon}&zoom=10"
@@ -358,6 +372,7 @@ class ReliableAPIFetcher:
                       record['description'], record['source'], record['url']))
             
             for record in soil_data:
+                cursor.execute("DELETE FROM reliable_soil WHERE district = ?", (record['district'],))
                 cursor.execute("""
                     INSERT INTO reliable_soil 
                     (district, lat, lon, pH, nitrogen, organic_carbon, sand_percent, clay_percent, date, source, url)
