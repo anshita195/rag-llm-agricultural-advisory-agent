@@ -95,56 +95,73 @@ class ReliableAPIFetcher:
         
         return weather_data if weather_data else self._nasa_weather_fallback(locations)
     
+    def _fetch_soilgrids_property(self, lat: float, lon: float, prop: str) -> Optional[float]:
+        """Fetch a single SoilGrids property (more reliable than batch requests)."""
+        url = "https://rest.isric.org/soilgrids/v2.0/properties/query"
+        params = {
+            'lon': lon,
+            'lat': lat,
+            'property': prop,
+            'depth': '0-5cm',
+            'value': 'mean',
+        }
+
+        for attempt in range(3):
+            try:
+                response = self.session.get(url, params=params, timeout=45)
+                if response.status_code == 200:
+                    layers = response.json().get('properties', {}).get('layers', [])
+                    if not layers:
+                        return None
+                    layer = layers[0]
+                    mean = layer.get('depths', [{}])[0].get('values', {}).get('mean')
+                    if mean is None:
+                        return None
+                    d_factor = layer.get('unit_measure', {}).get('d_factor', 1) or 1
+                    return mean / d_factor
+                if response.status_code == 503:
+                    continue
+                logger.error(f"SoilGrids API error {response.status_code} for {prop}")
+                return None
+            except Exception as e:
+                logger.error(f"SoilGrids fetch failed for {prop} (attempt {attempt + 1}): {e}")
+        return None
+
     def fetch_soilgrids_data(self, locations: List[Dict]) -> List[Dict]:
         """Fetch soil data from SoilGrids ISRIC API"""
         soil_data = []
-        
+
         for location in locations:
             lat, lon = location['lat'], location['lon']
             district = location['district']
-            
-            # SoilGrids REST API
-            url = f"https://rest.isric.org/soilgrids/v2.0/properties/query"
-            params = {
-                'lon': lon,
+
+            ph = self._fetch_soilgrids_property(lat, lon, 'phh2o')
+            if ph is None:
+                logger.error(f"SoilGrids pH fetch failed for {district}")
+                continue
+
+            nitrogen = self._fetch_soilgrids_property(lat, lon, 'nitrogen')
+            organic_carbon = self._fetch_soilgrids_property(lat, lon, 'soc')
+            sand = self._fetch_soilgrids_property(lat, lon, 'sand')
+            clay = self._fetch_soilgrids_property(lat, lon, 'clay')
+
+            soil_record = {
+                'district': district,
                 'lat': lat,
-                'property': ['phh2o', 'nitrogen', 'soc', 'sand', 'clay'],
-                'depth': ['0-5cm', '5-15cm'],
-                'value': 'mean'
+                'lon': lon,
+                'pH': ph,
+                'nitrogen': nitrogen if nitrogen is not None else 0.0,
+                'organic_carbon': organic_carbon if organic_carbon is not None else 0.0,
+                'sand_percent': sand if sand is not None else 0.0,
+                'clay_percent': clay if clay is not None else 0.0,
+                'date': datetime.now().strftime('%Y-%m-%d'),
+                'source': 'SoilGrids_ISRIC',
+                'url': f"https://soilgrids.org/#!/?lat={lat}&lng={lon}&zoom=10"
             }
-            
-            try:
-                response = self.session.get(url, params=params, timeout=15)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Extract soil properties
-                    properties = data.get('properties', {})
-                    
-                    soil_record = {
-                        'district': district,
-                        'lat': lat,
-                        'lon': lon,
-                        'pH': properties.get('phh2o', {}).get('0-5cm', {}).get('mean', 7.0) / 10,  # Convert from pH*10
-                        'nitrogen': properties.get('nitrogen', {}).get('0-5cm', {}).get('mean', 1500) / 100,  # Convert cg/kg to %
-                        'organic_carbon': properties.get('soc', {}).get('0-5cm', {}).get('mean', 15) / 10,  # Convert dg/kg to %
-                        'sand_percent': properties.get('sand', {}).get('0-5cm', {}).get('mean', 30),
-                        'clay_percent': properties.get('clay', {}).get('0-5cm', {}).get('mean', 25),
-                        'date': datetime.now().strftime('%Y-%m-%d'),
-                        'source': 'SoilGrids_ISRIC',
-                        'url': f"https://soilgrids.org/#!/?lat={lat}&lng={lon}&zoom=10"
-                    }
-                    
-                    soil_data.append(soil_record)
-                    logger.info(f"✅ SoilGrids data for {district}: pH {soil_record['pH']:.1f}")
-                    
-                else:
-                    logger.error(f"SoilGrids API error {response.status_code} for {district}")
-                    
-            except Exception as e:
-                logger.error(f"SoilGrids fetch failed for {district}: {e}")
-        
+
+            soil_data.append(soil_record)
+            logger.info(f"✅ SoilGrids data for {district}: pH {soil_record['pH']:.1f}")
+
         return soil_data if soil_data else self._soil_fallback(locations)
     
     def fetch_nasa_power_data(self, locations: List[Dict]) -> List[Dict]:
@@ -413,9 +430,8 @@ def main():
     """Test the reliable API fetcher"""
     print("Testing Reliable API Fetcher...")
     
-    # Test locations (Uttarakhand districts)
+    # Eval coverage districts
     locations = [
-        {'district': 'Dehradun', 'lat': 30.3165, 'lon': 78.0322},
         {'district': 'Roorkee', 'lat': 29.8543, 'lon': 77.8880},
         {'district': 'Haridwar', 'lat': 29.9457, 'lon': 78.1642}
     ]
