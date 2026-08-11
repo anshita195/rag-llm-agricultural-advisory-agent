@@ -1,6 +1,9 @@
 """Shared RAG configuration."""
 
+import os
+
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 CHROMA_PATH = "services/rag/chroma_db"
 DB_PATH = "data/agrisage.db"
 COLLECTION_NAME = "agri"

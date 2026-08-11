@@ -26,6 +26,7 @@ from rag.config import (
     DANGEROUS_KEYWORDS,
     DB_PATH,
     EMBEDDING_MODEL,
+    GEMINI_MODEL,
     MIN_PROVENANCE_SCORE,
     SOURCE_URLS,
 )
@@ -191,8 +192,9 @@ def retrieve_documents(
     initialize()
 
     try:
+        query_embedding = _sentence_model.encode([query]).tolist()
         results = _collection.query(
-            query_texts=[query],
+            query_embeddings=query_embedding,
             n_results=min(k * 3, 15),
             include=["documents", "metadatas", "distances"],
         )
@@ -309,7 +311,7 @@ def log_llm_request(
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "request_id": request_id,
-            "model": "gemini-2.0-flash",
+            "model": GEMINI_MODEL,
             "prompt_length": len(prompt),
             "status_code": status_code,
             "latency_ms": round(latency * 1000, 2),
@@ -339,7 +341,7 @@ def call_gemini_llm(prompt: str) -> Tuple[Optional[str], float]:
 
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"gemini-2.0-flash:generateContent?key={_gemini_api_key}"
+            f"{GEMINI_MODEL}:generateContent?key={_gemini_api_key}"
         )
         data = {
             "contents": [
