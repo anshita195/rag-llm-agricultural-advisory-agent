@@ -2,12 +2,16 @@
 """
 Build Chroma vector index for AgriSage RAG system
 """
+import sys
 import sqlite3
 import chromadb
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 import json
 import pandas as pd
+
+sys.path.append(str(Path(__file__).parent.parent))
+from rag.config import EMBEDDING_MODEL, CHROMA_PATH
 
 def load_data_from_db():
     """Load data from SQLite database for indexing"""
@@ -156,7 +160,7 @@ def load_data_from_db():
 def build_chroma_index():
     """Build Chroma vector database index"""
     print("Loading sentence transformer model...")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer(EMBEDDING_MODEL)
     
     print("Loading data from database...")
     documents, metadatas, ids = load_data_from_db()
@@ -167,7 +171,7 @@ def build_chroma_index():
     print(f"Found {len(documents)} documents to index")
     
     # Initialize Chroma client
-    chroma_path = Path("services/rag/chroma_db")
+    chroma_path = Path(CHROMA_PATH)
     chroma_path.mkdir(parents=True, exist_ok=True)
     
     client = chromadb.PersistentClient(path=str(chroma_path))
@@ -213,7 +217,7 @@ def test_index():
     """Test the built index with sample queries"""
     print("\nTesting index with sample queries...")
     
-    chroma_path = Path("services/rag/chroma_db")
+    chroma_path = Path(CHROMA_PATH)
     client = chromadb.PersistentClient(path=str(chroma_path))
     collection = client.get_collection("agri")
     
