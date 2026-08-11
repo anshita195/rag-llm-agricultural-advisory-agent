@@ -30,6 +30,14 @@ SOURCE_URLS = {
     "SoilGrids_ISRIC": "https://soilgrids.org",
 }
 
+ALLOWED_DISTRICTS = {"roorkee", "haridwar"}
+
+# Places outside eval coverage — explicit detection in queries
+OUT_OF_REGION_PLACES = {
+    "mumbai", "delhi", "bangalore", "bengaluru", "chennai", "kolkata",
+    "hyderabad", "pune", "ahmedabad", "jaipur", "lucknow", "kanpur",
+}
+
 DANGEROUS_KEYWORDS = [
     "pesticide",
     "insecticide",

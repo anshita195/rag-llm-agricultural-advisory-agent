@@ -154,11 +154,41 @@ def safety_check(question_text):
         'pesticide', 'insecticide', 'fungicide', 'herbicide',
         'dose', 'dosage', 'ppm', 'spray', 'chemical',
         'poison', 'toxic', 'ml/acre', 'gm/acre',
-        'concentration', 'dilution'
+        'concentration', 'dilution',
     ]
-    
+
     question_lower = question_text.lower()
-    return any(keyword in question_lower for keyword in risky_keywords)
+    if any(keyword in question_lower for keyword in risky_keywords):
+        return True
+
+    escalation_patterns = [
+        'best time to plant', 'when to sow', 'planting season',
+        'prepare soil for', 'sowing preparation', 'soil preparation for',
+        'mix urea', 'mix dap', 'combine fertilizer', 'mix fertilizer',
+    ]
+    if any(pattern in question_lower for pattern in escalation_patterns):
+        return True
+
+    disease_terms = ['disease', 'symptom', 'yellowing', 'curling', 'blight', 'diagnose']
+    treatment_terms = ['what to spray', 'what disease', 'what should i spray']
+    if any(term in question_lower for term in disease_terms):
+        if any(term in question_lower for term in treatment_terms + ['spray', 'treatment']):
+            return True
+
+    return False
+
+
+def escalation_response():
+    """Standard escalation message for risky queries."""
+    return {
+        "action": "escalate",
+        "advice": (
+            "This question requires expert consultation. Please contact your local "
+            "agricultural extension officer or Krishi Vigyan Kendra for safe recommendations."
+        ),
+        "confidence": 1.0,
+        "escalate": True,
+    }
 
 def get_fallback_response(question, context=None):
     """
@@ -175,12 +205,7 @@ def get_fallback_response(question, context=None):
     
     # Safety check first
     if safety_check(question):
-        return {
-            "action": "escalate",
-            "advice": "This question involves chemicals or dosages. Please consult your local agricultural extension officer or Krishi Vigyan Kendra for safe recommendations.",
-            "confidence": 1.0,
-            "escalate": True
-        }
+        return escalation_response()
     
     # Route to specific rules based on question content
     if any(word in question_lower for word in ['irrigat', 'water', 'moisture']):

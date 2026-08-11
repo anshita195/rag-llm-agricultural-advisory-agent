@@ -17,17 +17,18 @@ import requests
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
-from rules_engine.fallback import get_fallback_response
+from rules_engine.fallback import get_fallback_response, safety_check, escalation_response
 from rag.config import (
     ACTIONABLE_KEYWORDS,
+    ALLOWED_DISTRICTS,
     AUTHORITATIVE_SOURCES,
     CHROMA_PATH,
     COLLECTION_NAME,
-    DANGEROUS_KEYWORDS,
     DB_PATH,
     EMBEDDING_MODEL,
     GEMINI_MODEL,
     MIN_PROVENANCE_SCORE,
+    OUT_OF_REGION_PLACES,
     SOURCE_URLS,
 )
 from rag.prompts import PROMPT_TEMPLATE
@@ -136,17 +137,36 @@ def get_query_intent(query: str) -> Dict[str, float]:
     return intent_scores
 
 
+def _distance_to_similarity(distance: float) -> float:
+    """Convert Chroma L2 distance to a bounded 0-1 similarity score."""
+    return max(0.0, min(1.0, 1.0 - (distance / 2.0)))
+
+
+def _metadata_relevance_score(meta: Dict, relevant_types: List[str], location: Optional[str]) -> float:
+    """Bounded metadata relevance score in [0, 1]. Not vector similarity."""
+    score = 0.5
+    if meta.get("type") in relevant_types:
+        score += 0.3
+    district = meta.get("district", "")
+    if location and district.lower() == location.lower():
+        score += 0.2
+    elif location and location.lower() in district.lower():
+        score += 0.1
+    return min(1.0, score)
+
+
 def filter_by_metadata(
     documents: List[str],
     metadatas: List[Dict],
+    distances: List[float],
     query: str,
     location: Optional[str] = None,
 ) -> Tuple[List[str], List[Dict], List[float]]:
-    """Filter documents by metadata relevance."""
+    """Filter documents by metadata relevance and combine with vector similarity."""
     intent_scores = get_query_intent(query)
 
     if not intent_scores:
-        return documents, metadatas, [1.0] * len(documents)
+        return documents, metadatas, [_distance_to_similarity(d) for d in distances]
 
     primary_intent = max(intent_scores.keys(), key=lambda key: intent_scores[key])
 
@@ -165,22 +185,15 @@ def filter_by_metadata(
     filtered_metas: List[Dict] = []
     relevance_scores: List[float] = []
 
-    for doc, meta in zip(documents, metadatas):
-        base_score = 0.5
+    for doc, meta, distance in zip(documents, metadatas, distances):
+        metadata_score = _metadata_relevance_score(meta, relevant_types, location)
+        vector_score = _distance_to_similarity(distance)
+        combined_score = min(1.0, (0.4 * vector_score) + (0.6 * metadata_score))
 
-        if meta.get("type") in relevant_types:
-            base_score += 0.4
-
-        district = meta.get("district", "")
-        if location and district.lower() == location.lower():
-            base_score += 0.3
-        elif location and location.lower() in district.lower():
-            base_score += 0.2
-
-        if base_score >= 0.6:
+        if metadata_score >= 0.6:
             filtered_docs.append(doc)
             filtered_metas.append(meta)
-            relevance_scores.append(base_score)
+            relevance_scores.append(combined_score)
 
     return filtered_docs, filtered_metas, relevance_scores
 
@@ -201,12 +214,13 @@ def retrieve_documents(
 
         documents = results["documents"][0]
         metadatas = results["metadatas"][0]
+        distances = results["distances"][0]
 
         if not documents:
             return [], [], 0.0
 
         filtered_docs, filtered_metas, relevance_scores = filter_by_metadata(
-            documents, metadatas, query, location
+            documents, metadatas, distances, query, location
         )
 
         if not filtered_docs:
@@ -220,7 +234,10 @@ def retrieve_documents(
         final_docs = filtered_docs[:k]
         final_metas = filtered_metas[:k]
         final_scores = relevance_scores[:k]
-        avg_retrieval_score = sum(final_scores) / len(final_scores) if final_scores else 0.0
+        avg_retrieval_score = min(
+            1.0,
+            sum(final_scores) / len(final_scores) if final_scores else 0.0,
+        )
 
         logger.info(
             "Retrieved %s filtered documents, avg score: %.3f",
@@ -424,6 +441,67 @@ def _build_provenance(metadatas: List[Dict], documents: List[str]) -> List[Dict]
     return provenance
 
 
+def _extract_places(text: str) -> set:
+    """Find known place names mentioned in query text."""
+    lowered = text.lower()
+    found = set()
+    for place in OUT_OF_REGION_PLACES | ALLOWED_DISTRICTS:
+        if place in lowered:
+            found.add(place)
+    return found
+
+
+def check_geographic_coverage(question: str, location: Optional[str] = None) -> Optional[Dict]:
+    """Return an out-of-region response if the query is outside coverage."""
+    mentioned = _extract_places(question)
+    if location:
+        mentioned.add(location.lower())
+
+    if mentioned & OUT_OF_REGION_PLACES:
+        return {
+            "answer": (
+                "AgriSage currently covers Roorkee and Haridwar only. "
+                "I don't have weather or soil data for that location."
+            ),
+            "confidence": 0.2,
+            "provenance": [],
+            "escalate": False,
+            "fallback_used": False,
+            "actionable": False,
+            "safety_gate": "outside_coverage_area",
+        }
+
+    if mentioned and not mentioned <= ALLOWED_DISTRICTS:
+        return {
+            "answer": (
+                "AgriSage currently covers Roorkee and Haridwar only. "
+                "I don't have verified data for the location you asked about."
+            ),
+            "confidence": 0.2,
+            "provenance": [],
+            "escalate": False,
+            "fallback_used": False,
+            "actionable": False,
+            "safety_gate": "outside_coverage_area",
+        }
+
+    if location and location.lower() not in ALLOWED_DISTRICTS:
+        return {
+            "answer": (
+                "AgriSage currently covers Roorkee and Haridwar only. "
+                "Please select Roorkee or Haridwar as your location."
+            ),
+            "confidence": 0.2,
+            "provenance": [],
+            "escalate": False,
+            "fallback_used": False,
+            "actionable": False,
+            "safety_gate": "outside_coverage_area",
+        }
+
+    return None
+
+
 def ask(
     question: str,
     location: Optional[str] = None,
@@ -432,15 +510,15 @@ def ask(
     """Main RAG entry point. Returns a response dict for UI and API layers."""
     del user_id  # reserved for future session tracking
 
-    question_lower = question.lower()
-    if any(keyword in question_lower for keyword in DANGEROUS_KEYWORDS):
+    geo_block = check_geographic_coverage(question, location)
+    if geo_block:
+        return geo_block
+
+    if safety_check(question):
+        esc = escalation_response()
         return {
-            "answer": (
-                "This question involves chemicals or dosages that require expert consultation. "
-                "Please contact your local agricultural extension officer or Krishi Vigyan Kendra "
-                "for safe recommendations."
-            ),
-            "confidence": 1.0,
+            "answer": esc["advice"],
+            "confidence": esc["confidence"],
             "provenance": [],
             "escalate": True,
             "fallback_used": False,
