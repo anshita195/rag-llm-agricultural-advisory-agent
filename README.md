@@ -61,7 +61,19 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 
 ### 5. Access Application
 - **Frontend**: http://localhost:8501
-- **API Docs**: http://localhost:8000/docs
+- **API Docs**: http://localhost:8000/docs (optional — Streamlit calls the RAG pipeline in-process)
+
+## Deploy (Streamlit Community Cloud)
+
+1. **Push all commits** — remote `main` must include `data/agrisage.db`, `services/rag/chroma_db/`, and `services/rag/pipeline.py` (6 commits ahead of origin as of eval freeze).
+2. **Main file**: `frontend/streamlit_app.py` (calls `pipeline.ask()` directly — no `:8000` backend required).
+3. **Python version**: In deploy **Advanced settings → Python version**, select **3.11** or **3.12**. Community Cloud defaults to **3.12**; `runtime.txt` is **not** used. Do **not** select 3.13 — `numpy`/ML wheels may fail (same as local fresh-venv test on 3.13).
+4. **Secrets** (TOML in Advanced settings):
+   ```toml
+   GEMINI_API_KEY = "your_key"
+   OPENWEATHER_API_KEY = "your_key"
+   ```
+5. After deploy, verify sidebar shows database records and vector docs (pre-built artifacts load from repo).
 
 ## What Works Well
 
@@ -69,18 +81,16 @@ streamlit run frontend/streamlit_app.py --server.port 8501
 - "Weather forecast for next 3 days"
 - "Will it rain tomorrow in Roorkee?"
 - **Source**: OpenWeatherMap API
-- **Confidence**: High (90%+)
 
 ### Soil Queries  
 - "What is the soil pH in my area?"
-- "Soil preparation for maize"
+- "Is the soil suitable for maize?"
 - **Source**: SoilGrids ISRIC API
-- **Confidence**: High (90%+)
 
 ### Safety Mechanisms
 - "Best time to plant mustard" → Escalates to human expert
-- **Reason**: Conservative approach for complex agricultural advice
-- **Shows**: Robust safety systems
+- "Can I mix urea and DAP together?" → Escalates to human expert
+- Escalation rules were expanded to cover known gaps (planting timing, fertilizer mixing) **prior to eval**; pre-eval spot-checks on those queries are engineering validation, not blind confirmation
 
 ## Current Limitations
 
@@ -140,6 +150,23 @@ curl -X POST http://localhost:8000/ask \
 
 
 ## Performance
+
+Measured on a **23-query manual eval** (`logs/eval_23_results.json`, frozen at commit `0c67ef6`, valid run with 13s LLM spacing). Escalation rules were expanded for known gaps (planting timing, fertilizer mixing) **prior to eval**; pre-eval spot-checks on those queries are engineering validation, not blind confirmation.
+
+| Metric | Result | Notes |
+|--------|--------|-------|
+| Escalation recall | 7/8 (87.5%) | #13 wheat-sowing prep answered instead of escalating — pattern gap (`prepare soil for` vs `prepare soil in`); frozen-code finding |
+| Answer correctness | 22/23 (95.7%) | Same #13 miss; all other queries behaved as expected |
+| Groundedness (non-escalate) | 15/15 (100%) | Weather/soil answers used retrieved data on clean LLM path |
+| Retrieval precision | 21/22 (95.5%) | #23 retrieved in-region chunks before geo guard blocked |
+| Strict High label match | **1/10** | See confidence calibration below |
+| Geo guard (Mumbai) | Pass | Low confidence, `outside_coverage` |
+
+### Confidence calibration (not raw underperformance)
+
+Combined confidence = `0.6 × retrieval_score + 0.4 × llm_confidence`. When the LLM does not embed a parseable score, `llm_confidence` defaults to **0.7**. For typical good retrieval (~0.85), that yields **~0.79** — labeled **Medium** because High requires **≥ 0.8**. High is only reachable with retrieval **> ~0.92** or an explicit LLM confidence **≥ ~0.95**.
+
+The eval's strict-High expectations were written from the README's unverified "90%+" claim, **not** from this formula. **1/10 is therefore a calibration mismatch between stated labels and threshold math**, not evidence that weather/soil answers failed — on this run, 14/14 LLM-bound weather/soil queries returned grounded direct answers. In practice, users will see mostly Medium on good answers because the High bar is nearly unreachable by construction; a post-eval improvement would recalibrate (e.g. lower High to **≥ 0.75**, or adjust the 0.6/0.4 weight split) — documented here only; not changed during the code freeze.
 
 - **Response Time**: < 3 seconds for most queries
 - **Data Freshness**: Weather updated every 3 hours
