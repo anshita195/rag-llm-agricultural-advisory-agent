@@ -2,6 +2,17 @@
 
 A production-ready RAG (Retrieval-Augmented Generation) system that provides agricultural advice to Indian farmers using real-time data from authoritative sources.
 
+## Demo
+
+<img width="1901" height="1014" alt="image" src="https://github.com/user-attachments/assets/3b0e6530-0c71-41d7-811e-4ee6585792c8" />
+<img width="1918" height="1015" alt="image" src="https://github.com/user-attachments/assets/cb4e05d4-d623-43c3-9305-50e21c011300" />
+<img width="1917" height="1014" alt="image" src="https://github.com/user-attachments/assets/71982ecd-9b44-4f31-addf-8437f8c7aa64" />
+<img width="1917" height="1016" alt="image" src="https://github.com/user-attachments/assets/9782c659-a3ba-439b-9301-ad7978eb3fef" />
+
+## Video Demo
+
+https://youtu.be/hJqTQ70vMiw?si=79HKOQ_kyFOCRLrO&t=62
+
 ## What It Does
 
 AgriSage answers agricultural questions using:
@@ -172,5 +183,9 @@ The eval's strict-High expectations were written from the README's unverified "9
 - **Data Freshness**: Weather updated every 3 hours
 - **Vector Search**: Sub-second retrieval
 - **Concurrent Users**: Tested up to 50 simultaneous requests
+
+## Live
+
+https://rag-llm-agricultural-advisory-agent.streamlit.app/
 
 ---
